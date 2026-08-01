@@ -53,6 +53,21 @@ func main() {
 			os.Exit(1)
 		}
 		fmt.Printf("Task %d updated successfully\n", id)
+	case "delete":
+		if len(os.Args) < 3 {
+			fmt.Fprintln(os.Stderr, "Error: id required")
+			os.Exit(1)
+		}
+		id, err := strconv.Atoi(os.Args[2])
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: invalid ID %q\n", os.Args[2])
+			os.Exit(1)
+		}
+		if err := DeleteTask(TaskFilePath(), id); err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Printf("Task %d deleted successfully\n", id)
 	default:
 		fmt.Fprintf(os.Stderr, "Error: unknown command %q\n", os.Args[1])
 		os.Exit(1)

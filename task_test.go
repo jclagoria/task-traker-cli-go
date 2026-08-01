@@ -264,3 +264,54 @@ func TestUpdateTaskNotFound(t *testing.T) {
 		t.Fatal("expected error for non-existent ID, got nil")
 	}
 }
+
+func TestDeleteTask(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "tasks.json")
+	SaveTasks(path, []Task{
+		{ID: 1, Description: "A", Status: "todo"},
+		{ID: 2, Description: "B", Status: "done"},
+	})
+
+	if err := DeleteTask(path, 1); err != nil {
+		t.Fatalf("DeleteTask: %v", err)
+	}
+
+	tasks, _ := LoadTasks(path)
+	if len(tasks) != 1 {
+		t.Fatalf("got %d, want 1", len(tasks))
+	}
+	if tasks[0].ID != 2 {
+		t.Errorf("remaining ID = %d, want 2", tasks[0].ID)
+	}
+}
+
+func TestDeleteTaskNotFound(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "tasks.json")
+	SaveTasks(path, []Task{
+		{ID: 1, Description: "A", Status: "todo"},
+	})
+
+	err := DeleteTask(path, 99)
+	if err == nil {
+		t.Fatal("expected error for non-existent ID, got nil")
+	}
+}
+
+func TestDeletePreservesOtherIDs(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "tasks.json")
+	SaveTasks(path, []Task{
+		{ID: 1, Description: "A", Status: "todo"},
+		{ID: 2, Description: "B", Status: "todo"},
+		{ID: 3, Description: "C", Status: "todo"},
+	})
+
+	DeleteTask(path, 2)
+
+	tasks, _ := LoadTasks(path)
+	if len(tasks) != 2 {
+		t.Fatalf("got %d, want 2", len(tasks))
+	}
+	if tasks[0].ID != 1 || tasks[1].ID != 3 {
+		t.Errorf("IDs = [%d, %d], want [1, 3]", tasks[0].ID, tasks[1].ID)
+	}
+}

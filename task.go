@@ -123,3 +123,18 @@ func UpdateTask(filePath string, id int, description string) (Task, error) {
 	}
 	return Task{}, fmt.Errorf("task with ID %d not found", id)
 }
+
+func DeleteTask(filePath string, id int) error {
+	tasks, err := LoadTasks(filePath)
+	if err != nil {
+		return err
+	}
+
+	for i, t := range tasks {
+		if t.ID == id {
+			tasks = append(tasks[:i], tasks[i+1:]...)
+			return SaveTasks(filePath, tasks)
+		}
+	}
+	return fmt.Errorf("task with ID %d not found", id)
+}
