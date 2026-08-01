@@ -213,3 +213,54 @@ func TestListNoMatch(t *testing.T) {
 		t.Fatalf("got %d, want 0", len(tasks))
 	}
 }
+
+func TestUpdateTaskDescription(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "tasks.json")
+	SaveTasks(path, []Task{
+		{ID: 1, Description: "Old", Status: "todo", CreatedAt: "2026-01-01T00:00:00Z", UpdatedAt: "2026-01-01T00:00:00Z"},
+	})
+
+	updated, err := UpdateTask(path, 1, "New")
+	if err != nil {
+		t.Fatalf("UpdateTask: %v", err)
+	}
+	if updated.Description != "New" {
+		t.Errorf("Description = %q, want %q", updated.Description, "New")
+	}
+}
+
+func TestUpdateTaskPreservesCreatedAt(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "tasks.json")
+	SaveTasks(path, []Task{
+		{ID: 1, Description: "Old", Status: "todo", CreatedAt: "2026-01-01T00:00:00Z", UpdatedAt: "2026-01-01T00:00:00Z"},
+	})
+
+	updated, _ := UpdateTask(path, 1, "New")
+	if updated.CreatedAt != "2026-01-01T00:00:00Z" {
+		t.Errorf("CreatedAt changed to %q, should be unchanged", updated.CreatedAt)
+	}
+}
+
+func TestUpdateTaskSetsUpdatedAt(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "tasks.json")
+	SaveTasks(path, []Task{
+		{ID: 1, Description: "Old", Status: "todo", CreatedAt: "2026-01-01T00:00:00Z", UpdatedAt: "2026-01-01T00:00:00Z"},
+	})
+
+	updated, _ := UpdateTask(path, 1, "New")
+	if updated.UpdatedAt == "2026-01-01T00:00:00Z" {
+		t.Error("UpdatedAt was not changed")
+	}
+}
+
+func TestUpdateTaskNotFound(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "tasks.json")
+	SaveTasks(path, []Task{
+		{ID: 1, Description: "A", Status: "todo"},
+	})
+
+	_, err := UpdateTask(path, 99, "New")
+	if err == nil {
+		t.Fatal("expected error for non-existent ID, got nil")
+	}
+}

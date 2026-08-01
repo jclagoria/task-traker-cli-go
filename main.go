@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"strconv"
 )
 
 func main() {
@@ -36,6 +37,22 @@ func main() {
 		for _, t := range tasks {
 			fmt.Printf("%d [%s] %s\n", t.ID, t.Status, t.Description)
 		}
+	case "update":
+		if len(os.Args) < 4 {
+			fmt.Fprintln(os.Stderr, "Error: id and description required")
+			os.Exit(1)
+		}
+		id, err := strconv.Atoi(os.Args[2])
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: invalid ID %q\n", os.Args[2])
+			os.Exit(1)
+		}
+		_, err = UpdateTask(TaskFilePath(), id, os.Args[3])
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Printf("Task %d updated successfully\n", id)
 	default:
 		fmt.Fprintf(os.Stderr, "Error: unknown command %q\n", os.Args[1])
 		os.Exit(1)

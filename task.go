@@ -104,3 +104,22 @@ func ListTasks(filePath, status string) ([]Task, error) {
 	}
 	return filtered, nil
 }
+
+func UpdateTask(filePath string, id int, description string) (Task, error) {
+	tasks, err := LoadTasks(filePath)
+	if err != nil {
+		return Task{}, err
+	}
+
+	for i, t := range tasks {
+		if t.ID == id {
+			tasks[i].Description = description
+			tasks[i].UpdatedAt = time.Now().UTC().Format(time.RFC3339)
+			if err := SaveTasks(filePath, tasks); err != nil {
+				return Task{}, err
+			}
+			return tasks[i], nil
+		}
+	}
+	return Task{}, fmt.Errorf("task with ID %d not found", id)
+}
