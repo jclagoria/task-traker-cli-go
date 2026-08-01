@@ -37,7 +37,7 @@ func LoadTasks(filePath string) ([]Task, error) {
 
 	var tasks []Task
 	if err := json.Unmarshal(data, &tasks); err != nil {
-		return nil, fmt.Errorf("parsing %s: %w", filePath, err)
+		return nil, fmt.Errorf("%s is corrupted", filePath)
 	}
 	return tasks, nil
 }

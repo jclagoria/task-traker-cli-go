@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -68,6 +69,9 @@ func TestLoadMalformedJSON(t *testing.T) {
 	_, err := LoadTasks(path)
 	if err == nil {
 		t.Fatal("expected error for malformed JSON, got nil")
+	}
+	if !strings.Contains(err.Error(), "is corrupted") {
+		t.Errorf("error %q should contain %q", err.Error(), "is corrupted")
 	}
 }
 

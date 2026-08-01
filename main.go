@@ -89,7 +89,7 @@ func main() {
 		}
 		fmt.Printf("Task %d marked as %s\n", id, status)
 	default:
-		fmt.Fprintf(os.Stderr, "Error: unknown command %q\n", os.Args[1])
+		fmt.Fprintf(os.Stderr, "Error: unknown command %q\n\nUsage: task-traker-cli <command> [arguments]\nCommands: add, list, update, delete, mark-in-progress, mark-done\n", os.Args[1])
 		os.Exit(1)
 	}
 }
