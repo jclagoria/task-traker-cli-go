@@ -1,0 +1,32 @@
+{
+    "go.useLanguageServer": true,
+    "go.formatTool": "goimports",
+    "go.lintTool": "golangci-lint",
+    "go.lintOnSave": "package",
+  
+    "gopls": {
+      "ui.semanticTokens": true,
+      "ui.completion.usePlaceholders": true,
+      "ui.completion.completeUnimported": true,
+      "formatting.gofumpt": true,
+      "ui.codelenses": {
+        "generate": true,
+        "tidy": true,
+        "upgrade_dependency": true,
+        "test": true
+      },
+      "ui.diagnostic.analyses": {
+        "unusedparams": true,
+        "nilness": true,
+        "shadow": true
+      }
+    },
+  
+    "editor.formatOnSave": true,
+    "[go]": {
+      "editor.formatOnSave": true,
+      "editor.codeActionsOnSave": {
+        "source.organizeImports": "explicit"
+      }
+    }
+  }
