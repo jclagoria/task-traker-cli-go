@@ -4,8 +4,22 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"sync"
+	"syscall"
 	"time"
 )
+
+var fileLocks = make(map[string]*sync.Mutex)
+var fileLocksMu sync.Mutex
+
+func getFileLock(path string) *sync.Mutex {
+	fileLocksMu.Lock()
+	defer fileLocksMu.Unlock()
+	if fileLocks[path] == nil {
+		fileLocks[path] = &sync.Mutex{}
+	}
+	return fileLocks[path]
+}
 
 type Task struct {
 	ID          int    `json:"id"`
@@ -23,11 +37,22 @@ func TaskFilePath() string {
 }
 
 func LoadTasks(filePath string) ([]Task, error) {
-	data, err := os.ReadFile(filePath)
+	f, err := os.Open(filePath)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return []Task{}, nil
 		}
+		return nil, fmt.Errorf("reading %s: %w", filePath, err)
+	}
+	defer f.Close()
+
+	if err := syscall.Flock(int(f.Fd()), syscall.LOCK_EX); err != nil {
+		return nil, fmt.Errorf("locking %s: %w", filePath, err)
+	}
+	defer syscall.Flock(int(f.Fd()), syscall.LOCK_UN)
+
+	data, err := os.ReadFile(filePath)
+	if err != nil {
 		return nil, fmt.Errorf("reading %s: %w", filePath, err)
 	}
 
@@ -48,18 +73,27 @@ func SaveTasks(filePath string, tasks []Task) error {
 		return fmt.Errorf("marshaling tasks: %w", err)
 	}
 
-	tmp := filePath + ".tmp"
-	if err := os.WriteFile(tmp, data, 0644); err != nil {
-		return fmt.Errorf("writing %s: %w", tmp, err)
+	f, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+	if err != nil {
+		return fmt.Errorf("opening %s: %w", filePath, err)
 	}
+	defer f.Close()
 
-	if err := os.Rename(tmp, filePath); err != nil {
-		return fmt.Errorf("renaming %s to %s: %w", tmp, filePath, err)
+	if err := syscall.Flock(int(f.Fd()), syscall.LOCK_EX); err != nil {
+		return fmt.Errorf("locking %s: %w", filePath, err)
+	}
+	defer syscall.Flock(int(f.Fd()), syscall.LOCK_UN)
+
+	if _, err := f.Write(data); err != nil {
+		return fmt.Errorf("writing %s: %w", filePath, err)
 	}
 	return nil
 }
 
 func AddTask(filePath, description string) (Task, error) {
+	getFileLock(filePath).Lock()
+	defer getFileLock(filePath).Unlock()
+
 	tasks, err := LoadTasks(filePath)
 	if err != nil {
 		return Task{}, err
@@ -106,6 +140,9 @@ func ListTasks(filePath, status string) ([]Task, error) {
 }
 
 func UpdateTask(filePath string, id int, description string) (Task, error) {
+	getFileLock(filePath).Lock()
+	defer getFileLock(filePath).Unlock()
+
 	tasks, err := LoadTasks(filePath)
 	if err != nil {
 		return Task{}, err
@@ -125,6 +162,9 @@ func UpdateTask(filePath string, id int, description string) (Task, error) {
 }
 
 func DeleteTask(filePath string, id int) error {
+	getFileLock(filePath).Lock()
+	defer getFileLock(filePath).Unlock()
+
 	tasks, err := LoadTasks(filePath)
 	if err != nil {
 		return err
@@ -140,6 +180,9 @@ func DeleteTask(filePath string, id int) error {
 }
 
 func MarkTask(filePath string, id int, status string) (Task, error) {
+	getFileLock(filePath).Lock()
+	defer getFileLock(filePath).Unlock()
+
 	tasks, err := LoadTasks(filePath)
 	if err != nil {
 		return Task{}, err

@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 )
 
@@ -359,5 +360,28 @@ func TestMarkTaskNotFound(t *testing.T) {
 	_, err := MarkTask(path, 99, "in-progress")
 	if err == nil {
 		t.Fatal("expected error, got nil")
+	}
+}
+
+func TestConcurrentWrites(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "tasks.json")
+	SaveTasks(path, []Task{})
+
+	var wg sync.WaitGroup
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
+		go func(n int) {
+			defer wg.Done()
+			AddTask(path, "task")
+		}(i)
+	}
+	wg.Wait()
+
+	tasks, err := LoadTasks(path)
+	if err != nil {
+		t.Fatalf("LoadTasks: %v", err)
+	}
+	if len(tasks) != 10 {
+		t.Errorf("got %d tasks, want 10", len(tasks))
 	}
 }
