@@ -157,3 +157,59 @@ func TestAddTaskPersistsToFile(t *testing.T) {
 		t.Errorf("Description = %q, want %q", loaded[0].Description, "Persist me")
 	}
 }
+
+func TestListAllTasks(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "tasks.json")
+	SaveTasks(path, []Task{
+		{ID: 1, Description: "A", Status: "todo"},
+		{ID: 2, Description: "B", Status: "done"},
+	})
+
+	tasks, err := ListTasks(path, "")
+	if err != nil {
+		t.Fatalf("ListTasks: %v", err)
+	}
+	if len(tasks) != 2 {
+		t.Fatalf("got %d, want 2", len(tasks))
+	}
+}
+
+func TestListFilterByStatus(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "tasks.json")
+	SaveTasks(path, []Task{
+		{ID: 1, Description: "A", Status: "todo"},
+		{ID: 2, Description: "B", Status: "done"},
+		{ID: 3, Description: "C", Status: "todo"},
+	})
+
+	tasks, _ := ListTasks(path, "todo")
+	if len(tasks) != 2 {
+		t.Fatalf("got %d, want 2", len(tasks))
+	}
+	if tasks[0].Description != "A" || tasks[1].Description != "C" {
+		t.Errorf("got %v, want [A, C]", tasks)
+	}
+}
+
+func TestListEmptyFile(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "tasks.json")
+	tasks, err := ListTasks(path, "")
+	if err != nil {
+		t.Fatalf("ListTasks: %v", err)
+	}
+	if len(tasks) != 0 {
+		t.Fatalf("got %d, want 0", len(tasks))
+	}
+}
+
+func TestListNoMatch(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "tasks.json")
+	SaveTasks(path, []Task{
+		{ID: 1, Description: "A", Status: "todo"},
+	})
+
+	tasks, _ := ListTasks(path, "done")
+	if len(tasks) != 0 {
+		t.Fatalf("got %d, want 0", len(tasks))
+	}
+}

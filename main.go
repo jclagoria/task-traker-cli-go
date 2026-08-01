@@ -23,6 +23,19 @@ func main() {
 			os.Exit(1)
 		}
 		fmt.Printf("Task added successfully (ID: %d)\n", task.ID)
+	case "list":
+		status := ""
+		if len(os.Args) >= 3 {
+			status = os.Args[2]
+		}
+		tasks, err := ListTasks(TaskFilePath(), status)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+		for _, t := range tasks {
+			fmt.Printf("%d [%s] %s\n", t.ID, t.Status, t.Description)
+		}
 	default:
 		fmt.Fprintf(os.Stderr, "Error: unknown command %q\n", os.Args[1])
 		os.Exit(1)

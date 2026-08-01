@@ -85,3 +85,22 @@ func AddTask(filePath, description string) (Task, error) {
 	}
 	return task, nil
 }
+
+func ListTasks(filePath, status string) ([]Task, error) {
+	tasks, err := LoadTasks(filePath)
+	if err != nil {
+		return nil, err
+	}
+
+	if status == "" {
+		return tasks, nil
+	}
+
+	var filtered []Task
+	for _, t := range tasks {
+		if t.Status == status {
+			filtered = append(filtered, t)
+		}
+	}
+	return filtered, nil
+}
