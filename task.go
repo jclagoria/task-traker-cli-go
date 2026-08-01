@@ -138,3 +138,22 @@ func DeleteTask(filePath string, id int) error {
 	}
 	return fmt.Errorf("task with ID %d not found", id)
 }
+
+func MarkTask(filePath string, id int, status string) (Task, error) {
+	tasks, err := LoadTasks(filePath)
+	if err != nil {
+		return Task{}, err
+	}
+
+	for i, t := range tasks {
+		if t.ID == id {
+			tasks[i].Status = status
+			tasks[i].UpdatedAt = time.Now().UTC().Format(time.RFC3339)
+			if err := SaveTasks(filePath, tasks); err != nil {
+				return Task{}, err
+			}
+			return tasks[i], nil
+		}
+	}
+	return Task{}, fmt.Errorf("task with ID %d not found", id)
+}

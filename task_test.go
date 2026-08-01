@@ -315,3 +315,45 @@ func TestDeletePreservesOtherIDs(t *testing.T) {
 		t.Errorf("IDs = [%d, %d], want [1, 3]", tasks[0].ID, tasks[1].ID)
 	}
 }
+
+func TestMarkTaskFromTodo(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "tasks.json")
+	SaveTasks(path, []Task{
+		{ID: 1, Description: "A", Status: "todo", CreatedAt: "2026-01-01T00:00:00Z", UpdatedAt: "2026-01-01T00:00:00Z"},
+	})
+
+	marked, err := MarkTask(path, 1, "in-progress")
+	if err != nil {
+		t.Fatalf("MarkTask: %v", err)
+	}
+	if marked.Status != "in-progress" {
+		t.Errorf("Status = %q, want %q", marked.Status, "in-progress")
+	}
+	if marked.CreatedAt != "2026-01-01T00:00:00Z" {
+		t.Errorf("CreatedAt changed to %q", marked.CreatedAt)
+	}
+}
+
+func TestMarkTaskFromDone(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "tasks.json")
+	SaveTasks(path, []Task{
+		{ID: 1, Description: "A", Status: "done"},
+	})
+
+	marked, _ := MarkTask(path, 1, "in-progress")
+	if marked.Status != "in-progress" {
+		t.Errorf("Status = %q, want %q", marked.Status, "in-progress")
+	}
+}
+
+func TestMarkTaskNotFound(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "tasks.json")
+	SaveTasks(path, []Task{
+		{ID: 1, Description: "A", Status: "todo"},
+	})
+
+	_, err := MarkTask(path, 99, "in-progress")
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+}

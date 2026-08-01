@@ -68,6 +68,26 @@ func main() {
 			os.Exit(1)
 		}
 		fmt.Printf("Task %d deleted successfully\n", id)
+	case "mark-in-progress", "mark-done":
+		if len(os.Args) < 3 {
+			fmt.Fprintln(os.Stderr, "Error: id required")
+			os.Exit(1)
+		}
+		id, err := strconv.Atoi(os.Args[2])
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: invalid ID %q\n", os.Args[2])
+			os.Exit(1)
+		}
+		status := "in-progress"
+		if os.Args[1] == "mark-done" {
+			status = "done"
+		}
+		_, err = MarkTask(TaskFilePath(), id, status)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Printf("Task %d marked as %s\n", id, status)
 	default:
 		fmt.Fprintf(os.Stderr, "Error: unknown command %q\n", os.Args[1])
 		os.Exit(1)
