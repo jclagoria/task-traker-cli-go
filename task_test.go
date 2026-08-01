@@ -103,3 +103,57 @@ func TestTaskFilePathEnv(t *testing.T) {
 		t.Errorf("got %v, want 1 task with description 'Env task'", loaded)
 	}
 }
+
+func TestAddTaskToEmptyList(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "tasks.json")
+	task, err := AddTask(path, "Buy groceries")
+	if err != nil {
+		t.Fatalf("AddTask: %v", err)
+	}
+	if task.ID != 1 {
+		t.Errorf("ID = %d, want 1", task.ID)
+	}
+	if task.Description != "Buy groceries" {
+		t.Errorf("Description = %q, want %q", task.Description, "Buy groceries")
+	}
+	if task.Status != "todo" {
+		t.Errorf("Status = %q, want %q", task.Status, "todo")
+	}
+	if task.CreatedAt == "" {
+		t.Error("CreatedAt is empty")
+	}
+	if task.UpdatedAt == "" {
+		t.Error("UpdatedAt is empty")
+	}
+}
+
+func TestAddTaskIncrementID(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "tasks.json")
+	AddTask(path, "First")
+	task2, _ := AddTask(path, "Second")
+
+	if task2.ID != 2 {
+		t.Errorf("second task ID = %d, want 2", task2.ID)
+	}
+
+	tasks, _ := LoadTasks(path)
+	if len(tasks) != 2 {
+		t.Fatalf("got %d tasks, want 2", len(tasks))
+	}
+}
+
+func TestAddTaskPersistsToFile(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "tasks.json")
+	AddTask(path, "Persist me")
+
+	loaded, err := LoadTasks(path)
+	if err != nil {
+		t.Fatalf("LoadTasks: %v", err)
+	}
+	if len(loaded) != 1 {
+		t.Fatalf("got %d tasks, want 1", len(loaded))
+	}
+	if loaded[0].Description != "Persist me" {
+		t.Errorf("Description = %q, want %q", loaded[0].Description, "Persist me")
+	}
+}

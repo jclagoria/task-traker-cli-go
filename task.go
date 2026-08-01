@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"time"
 )
 
 type Task struct {
@@ -56,4 +57,31 @@ func SaveTasks(filePath string, tasks []Task) error {
 		return fmt.Errorf("renaming %s to %s: %w", tmp, filePath, err)
 	}
 	return nil
+}
+
+func AddTask(filePath, description string) (Task, error) {
+	tasks, err := LoadTasks(filePath)
+	if err != nil {
+		return Task{}, err
+	}
+
+	now := time.Now().UTC().Format(time.RFC3339)
+	id := 1
+	if len(tasks) > 0 {
+		id = tasks[len(tasks)-1].ID + 1
+	}
+
+	task := Task{
+		ID:          id,
+		Description: description,
+		Status:      "todo",
+		CreatedAt:   now,
+		UpdatedAt:   now,
+	}
+
+	tasks = append(tasks, task)
+	if err := SaveTasks(filePath, tasks); err != nil {
+		return Task{}, err
+	}
+	return task, nil
 }
