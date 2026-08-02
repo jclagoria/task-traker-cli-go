@@ -134,7 +134,7 @@ func TestAddTaskToEmptyList(t *testing.T) {
 
 func TestAddTaskIncrementID(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "tasks.json")
-	AddTask(path, "First")
+	_, _ = AddTask(path, "First")
 	task2, _ := AddTask(path, "Second")
 
 	if task2.ID != 2 {
@@ -149,7 +149,7 @@ func TestAddTaskIncrementID(t *testing.T) {
 
 func TestAddTaskPersistsToFile(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "tasks.json")
-	AddTask(path, "Persist me")
+	_, _ = AddTask(path, "Persist me")
 
 	loaded, err := LoadTasks(path)
 	if err != nil {
@@ -165,7 +165,7 @@ func TestAddTaskPersistsToFile(t *testing.T) {
 
 func TestListAllTasks(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "tasks.json")
-	SaveTasks(path, []Task{
+	_ = SaveTasks(path, []Task{
 		{ID: 1, Description: "A", Status: "todo"},
 		{ID: 2, Description: "B", Status: "done"},
 	})
@@ -181,7 +181,7 @@ func TestListAllTasks(t *testing.T) {
 
 func TestListFilterByStatus(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "tasks.json")
-	SaveTasks(path, []Task{
+	_ = SaveTasks(path, []Task{
 		{ID: 1, Description: "A", Status: "todo"},
 		{ID: 2, Description: "B", Status: "done"},
 		{ID: 3, Description: "C", Status: "todo"},
@@ -209,7 +209,7 @@ func TestListEmptyFile(t *testing.T) {
 
 func TestListNoMatch(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "tasks.json")
-	SaveTasks(path, []Task{
+	_ = SaveTasks(path, []Task{
 		{ID: 1, Description: "A", Status: "todo"},
 	})
 
@@ -221,7 +221,7 @@ func TestListNoMatch(t *testing.T) {
 
 func TestUpdateTaskDescription(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "tasks.json")
-	SaveTasks(path, []Task{
+	_ = SaveTasks(path, []Task{
 		{ID: 1, Description: "Old", Status: "todo", CreatedAt: "2026-01-01T00:00:00Z", UpdatedAt: "2026-01-01T00:00:00Z"},
 	})
 
@@ -236,7 +236,7 @@ func TestUpdateTaskDescription(t *testing.T) {
 
 func TestUpdateTaskPreservesCreatedAt(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "tasks.json")
-	SaveTasks(path, []Task{
+	_ = SaveTasks(path, []Task{
 		{ID: 1, Description: "Old", Status: "todo", CreatedAt: "2026-01-01T00:00:00Z", UpdatedAt: "2026-01-01T00:00:00Z"},
 	})
 
@@ -248,7 +248,7 @@ func TestUpdateTaskPreservesCreatedAt(t *testing.T) {
 
 func TestUpdateTaskSetsUpdatedAt(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "tasks.json")
-	SaveTasks(path, []Task{
+	_ = SaveTasks(path, []Task{
 		{ID: 1, Description: "Old", Status: "todo", CreatedAt: "2026-01-01T00:00:00Z", UpdatedAt: "2026-01-01T00:00:00Z"},
 	})
 
@@ -260,7 +260,7 @@ func TestUpdateTaskSetsUpdatedAt(t *testing.T) {
 
 func TestUpdateTaskNotFound(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "tasks.json")
-	SaveTasks(path, []Task{
+	_ = SaveTasks(path, []Task{
 		{ID: 1, Description: "A", Status: "todo"},
 	})
 
@@ -272,7 +272,7 @@ func TestUpdateTaskNotFound(t *testing.T) {
 
 func TestDeleteTask(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "tasks.json")
-	SaveTasks(path, []Task{
+	_ = SaveTasks(path, []Task{
 		{ID: 1, Description: "A", Status: "todo"},
 		{ID: 2, Description: "B", Status: "done"},
 	})
@@ -292,7 +292,7 @@ func TestDeleteTask(t *testing.T) {
 
 func TestDeleteTaskNotFound(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "tasks.json")
-	SaveTasks(path, []Task{
+	_ = SaveTasks(path, []Task{
 		{ID: 1, Description: "A", Status: "todo"},
 	})
 
@@ -304,13 +304,13 @@ func TestDeleteTaskNotFound(t *testing.T) {
 
 func TestDeletePreservesOtherIDs(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "tasks.json")
-	SaveTasks(path, []Task{
+	_ = SaveTasks(path, []Task{
 		{ID: 1, Description: "A", Status: "todo"},
 		{ID: 2, Description: "B", Status: "todo"},
 		{ID: 3, Description: "C", Status: "todo"},
 	})
 
-	DeleteTask(path, 2)
+	_ = DeleteTask(path, 2)
 
 	tasks, _ := LoadTasks(path)
 	if len(tasks) != 2 {
@@ -323,7 +323,7 @@ func TestDeletePreservesOtherIDs(t *testing.T) {
 
 func TestMarkTaskFromTodo(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "tasks.json")
-	SaveTasks(path, []Task{
+	_ = SaveTasks(path, []Task{
 		{ID: 1, Description: "A", Status: "todo", CreatedAt: "2026-01-01T00:00:00Z", UpdatedAt: "2026-01-01T00:00:00Z"},
 	})
 
@@ -341,7 +341,7 @@ func TestMarkTaskFromTodo(t *testing.T) {
 
 func TestMarkTaskFromDone(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "tasks.json")
-	SaveTasks(path, []Task{
+	_ = SaveTasks(path, []Task{
 		{ID: 1, Description: "A", Status: "done"},
 	})
 
@@ -353,7 +353,7 @@ func TestMarkTaskFromDone(t *testing.T) {
 
 func TestMarkTaskNotFound(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "tasks.json")
-	SaveTasks(path, []Task{
+	_ = SaveTasks(path, []Task{
 		{ID: 1, Description: "A", Status: "todo"},
 	})
 
@@ -365,14 +365,14 @@ func TestMarkTaskNotFound(t *testing.T) {
 
 func TestConcurrentWrites(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "tasks.json")
-	SaveTasks(path, []Task{})
+	_ = SaveTasks(path, []Task{})
 
 	var wg sync.WaitGroup
 	for i := 0; i < 10; i++ {
 		wg.Add(1)
 		go func(n int) {
 			defer wg.Done()
-			AddTask(path, "task")
+			_, _ = AddTask(path, "task")
 		}(i)
 	}
 	wg.Wait()

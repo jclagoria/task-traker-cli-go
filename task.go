@@ -44,12 +44,12 @@ func LoadTasks(filePath string) ([]Task, error) {
 		}
 		return nil, fmt.Errorf("reading %s: %w", filePath, err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	if err := syscall.Flock(int(f.Fd()), syscall.LOCK_EX); err != nil {
 		return nil, fmt.Errorf("locking %s: %w", filePath, err)
 	}
-	defer syscall.Flock(int(f.Fd()), syscall.LOCK_UN)
+	defer func() { _ = syscall.Flock(int(f.Fd()), syscall.LOCK_UN) }()
 
 	data, err := os.ReadFile(filePath)
 	if err != nil {
@@ -77,12 +77,12 @@ func SaveTasks(filePath string, tasks []Task) error {
 	if err != nil {
 		return fmt.Errorf("opening %s: %w", filePath, err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	if err := syscall.Flock(int(f.Fd()), syscall.LOCK_EX); err != nil {
 		return fmt.Errorf("locking %s: %w", filePath, err)
 	}
-	defer syscall.Flock(int(f.Fd()), syscall.LOCK_UN)
+	defer func() { _ = syscall.Flock(int(f.Fd()), syscall.LOCK_UN) }()
 
 	if _, err := f.Write(data); err != nil {
 		return fmt.Errorf("writing %s: %w", filePath, err)
