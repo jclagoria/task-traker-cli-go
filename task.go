@@ -6,22 +6,9 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"sync"
 	"syscall"
 	"time"
 )
-
-var fileLocks = make(map[string]*sync.Mutex)
-var fileLocksMu sync.Mutex
-
-func getFileLock(path string) *sync.Mutex {
-	fileLocksMu.Lock()
-	defer fileLocksMu.Unlock()
-	if fileLocks[path] == nil {
-		fileLocks[path] = &sync.Mutex{}
-	}
-	return fileLocks[path]
-}
 
 // Status represents the state of a task.
 type Status string
@@ -111,35 +98,78 @@ func SaveTasks(filePath string, tasks []Task) error {
 	return nil
 }
 
+// rwTasks opens the file, acquires an exclusive flock, reads tasks, calls fn,
+// and writes the result back — all under a single lock.
+func rwTasks(filePath string, fn func([]Task) ([]Task, error)) ([]Task, error) {
+	f, err := os.OpenFile(filePath, os.O_RDWR|os.O_CREATE, 0644)
+	if err != nil {
+		return nil, fmt.Errorf("opening %s: %w", filePath, err)
+	}
+	defer func() { _ = f.Close() }()
+
+	if err := syscall.Flock(int(f.Fd()), syscall.LOCK_EX); err != nil {
+		return nil, fmt.Errorf("locking %s: %w", filePath, err)
+	}
+	defer func() { _ = syscall.Flock(int(f.Fd()), syscall.LOCK_UN) }()
+
+	data, err := io.ReadAll(f)
+	if err != nil {
+		return nil, fmt.Errorf("reading %s: %w", filePath, err)
+	}
+
+	var tasks []Task
+	if len(data) > 0 {
+		if err := json.Unmarshal(data, &tasks); err != nil {
+			return nil, fmt.Errorf("%s is corrupted", filePath)
+		}
+	}
+
+	result, err := fn(tasks)
+	if err != nil {
+		return nil, err
+	}
+
+	out, err := json.MarshalIndent(result, "", "  ")
+	if err != nil {
+		return nil, fmt.Errorf("marshaling tasks: %w", err)
+	}
+
+	if err := f.Truncate(0); err != nil {
+		return nil, fmt.Errorf("truncating %s: %w", filePath, err)
+	}
+	if _, err := f.Seek(0, 0); err != nil {
+		return nil, fmt.Errorf("seeking %s: %w", filePath, err)
+	}
+	if _, err := f.Write(out); err != nil {
+		return nil, fmt.Errorf("writing %s: %w", filePath, err)
+	}
+	return result, nil
+}
+
 // AddTask creates a new task with auto-incremented ID and status todo.
 func AddTask(filePath, description string) (Task, error) {
-	getFileLock(filePath).Lock()
-	defer getFileLock(filePath).Unlock()
+	now := time.Now().UTC().Format(time.RFC3339)
+	var added Task
 
-	tasks, err := LoadTasks(filePath)
+	result, err := rwTasks(filePath, func(tasks []Task) ([]Task, error) {
+		id := 1
+		if len(tasks) > 0 {
+			id = tasks[len(tasks)-1].ID + 1
+		}
+		added = Task{
+			ID:          id,
+			Description: description,
+			Status:      StatusTodo,
+			CreatedAt:   now,
+			UpdatedAt:   now,
+		}
+		return append(tasks, added), nil
+	})
 	if err != nil {
 		return Task{}, err
 	}
-
-	now := time.Now().UTC().Format(time.RFC3339)
-	id := 1
-	if len(tasks) > 0 {
-		id = tasks[len(tasks)-1].ID + 1
-	}
-
-	task := Task{
-		ID:          id,
-		Description: description,
-		Status:      StatusTodo,
-		CreatedAt:   now,
-		UpdatedAt:   now,
-	}
-
-	tasks = append(tasks, task)
-	if err := SaveTasks(filePath, tasks); err != nil {
-		return Task{}, err
-	}
-	return task, nil
+	_ = result
+	return added, nil
 }
 
 // ListTasks returns all tasks, optionally filtered by status.
@@ -164,25 +194,23 @@ func ListTasks(filePath string, status Status) ([]Task, error) {
 
 // modifyTask locks, loads, mutates a task by ID, and saves.
 func modifyTask(filePath string, id int, mutate func(*Task)) (Task, error) {
-	getFileLock(filePath).Lock()
-	defer getFileLock(filePath).Unlock()
+	var modified Task
 
-	tasks, err := LoadTasks(filePath)
+	_, err := rwTasks(filePath, func(tasks []Task) ([]Task, error) {
+		for i, t := range tasks {
+			if t.ID == id {
+				mutate(&tasks[i])
+				tasks[i].UpdatedAt = time.Now().UTC().Format(time.RFC3339)
+				modified = tasks[i]
+				return tasks, nil
+			}
+		}
+		return nil, fmt.Errorf("task with ID %d not found", id)
+	})
 	if err != nil {
 		return Task{}, err
 	}
-
-	for i, t := range tasks {
-		if t.ID == id {
-			mutate(&tasks[i])
-			tasks[i].UpdatedAt = time.Now().UTC().Format(time.RFC3339)
-			if err := SaveTasks(filePath, tasks); err != nil {
-				return Task{}, err
-			}
-			return tasks[i], nil
-		}
-	}
-	return Task{}, fmt.Errorf("task with ID %d not found", id)
+	return modified, nil
 }
 
 // UpdateTask updates the description of an existing task by ID.
@@ -192,21 +220,15 @@ func UpdateTask(filePath string, id int, description string) (Task, error) {
 
 // DeleteTask removes a task by ID.
 func DeleteTask(filePath string, id int) error {
-	getFileLock(filePath).Lock()
-	defer getFileLock(filePath).Unlock()
-
-	tasks, err := LoadTasks(filePath)
-	if err != nil {
-		return err
-	}
-
-	for i, t := range tasks {
-		if t.ID == id {
-			tasks = append(tasks[:i], tasks[i+1:]...)
-			return SaveTasks(filePath, tasks)
+	_, err := rwTasks(filePath, func(tasks []Task) ([]Task, error) {
+		for i, t := range tasks {
+			if t.ID == id {
+				return append(tasks[:i], tasks[i+1:]...), nil
+			}
 		}
-	}
-	return fmt.Errorf("task with ID %d not found", id)
+		return nil, fmt.Errorf("task with ID %d not found", id)
+	})
+	return err
 }
 
 // MarkTask updates the status of an existing task by ID.
