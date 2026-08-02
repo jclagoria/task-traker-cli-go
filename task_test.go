@@ -76,39 +76,6 @@ func TestLoadMalformedJSON(t *testing.T) {
 	}
 }
 
-func TestTaskFilePathDefault(t *testing.T) {
-	got := TaskFilePath()
-	if got != "tasks.json" {
-		t.Errorf("TaskFilePath() = %q, want %q", got, "tasks.json")
-	}
-}
-
-func TestTaskFilePathEnvOverride(t *testing.T) {
-	t.Setenv("TASK_FILE", "/custom/path.json")
-	got := TaskFilePath()
-	if got != "/custom/path.json" {
-		t.Errorf("TaskFilePath() = %q, want %q", got, "/custom/path.json")
-	}
-}
-
-func TestTaskFilePathEnv(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "env.json")
-	t.Setenv("TASK_FILE", path)
-
-	tasks := []Task{{ID: 1, Description: "Env task", Status: StatusTodo, CreatedAt: "2026-01-01T00:00:00Z", UpdatedAt: "2026-01-01T00:00:00Z"}}
-	if err := SaveTasks(path, tasks); err != nil {
-		t.Fatalf("SaveTasks: %v", err)
-	}
-
-	loaded, err := LoadTasks(path)
-	if err != nil {
-		t.Fatalf("LoadTasks: %v", err)
-	}
-	if len(loaded) != 1 || loaded[0].Description != "Env task" {
-		t.Errorf("got %v, want 1 task with description 'Env task'", loaded)
-	}
-}
-
 func TestAddTaskToEmptyList(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "tasks.json")
 	task, err := AddTask(path, "Buy groceries")

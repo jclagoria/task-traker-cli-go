@@ -48,14 +48,6 @@ type Task struct {
 	UpdatedAt   string `json:"updatedAt"`
 }
 
-// TaskFilePath returns the path to the JSON task file, defaulting to tasks.json.
-func TaskFilePath() string {
-	if v := os.Getenv("TASK_FILE"); v != "" {
-		return v
-	}
-	return "tasks.json"
-}
-
 // LoadTasks reads and unmarshals tasks from the JSON file.
 func LoadTasks(filePath string) ([]Task, error) {
 	f, err := os.Open(filePath)
