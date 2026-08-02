@@ -13,6 +13,37 @@ import (
 // taskFile is the path to the JSON task file.
 var taskFile = "tasks.json"
 
+// withLockedFile opens a file with the given flags, acquires an exclusive flock,
+// and calls fn. The file is closed and flock released when fn returns.
+func withLockedFile(flag int, fn func(*os.File) error) error {
+	f, err := os.OpenFile(taskFile, flag, 0644)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = f.Close() }()
+	if err := syscall.Flock(int(f.Fd()), syscall.LOCK_EX); err != nil {
+		return fmt.Errorf("locking %s: %w", taskFile, err)
+	}
+	defer func() { _ = syscall.Flock(int(f.Fd()), syscall.LOCK_UN) }()
+	return fn(f)
+}
+
+// readTasksFromFile reads and unmarshals tasks from an already-open, locked file.
+func readTasksFromFile(f *os.File) ([]Task, error) {
+	data, err := io.ReadAll(f)
+	if err != nil {
+		return nil, fmt.Errorf("reading %s: %w", taskFile, err)
+	}
+	if len(data) == 0 {
+		return []Task{}, nil
+	}
+	var tasks []Task
+	if err := json.Unmarshal(data, &tasks); err != nil {
+		return nil, fmt.Errorf("%s is corrupted", taskFile)
+	}
+	return tasks, nil
+}
+
 // Status represents the state of a task.
 type Status string
 
@@ -40,32 +71,17 @@ type Task struct {
 
 // LoadTasks reads and unmarshals tasks from the JSON file.
 func LoadTasks() ([]Task, error) {
-	f, err := os.Open(taskFile)
+	var tasks []Task
+	err := withLockedFile(os.O_RDONLY, func(f *os.File) error {
+		var err error
+		tasks, err = readTasksFromFile(f)
+		return err
+	})
 	if err != nil {
 		if os.IsNotExist(err) {
 			return []Task{}, nil
 		}
-		return nil, fmt.Errorf("reading %s: %w", taskFile, err)
-	}
-	defer func() { _ = f.Close() }()
-
-	if err := syscall.Flock(int(f.Fd()), syscall.LOCK_EX); err != nil {
-		return nil, fmt.Errorf("locking %s: %w", taskFile, err)
-	}
-	defer func() { _ = syscall.Flock(int(f.Fd()), syscall.LOCK_UN) }()
-
-	data, err := io.ReadAll(f)
-	if err != nil {
-		return nil, fmt.Errorf("reading %s: %w", taskFile, err)
-	}
-
-	if len(data) == 0 {
-		return []Task{}, nil
-	}
-
-	var tasks []Task
-	if err := json.Unmarshal(data, &tasks); err != nil {
-		return nil, fmt.Errorf("%s is corrupted", taskFile)
+		return nil, err
 	}
 	return tasks, nil
 }
@@ -104,47 +120,36 @@ func saveTasks(tasks []Task) error {
 // rwTasks opens the file, acquires an exclusive flock, reads tasks, calls fn,
 // and writes the result back — all under a single lock.
 func rwTasks(fn func([]Task) ([]Task, error)) ([]Task, error) {
-	f, err := os.OpenFile(taskFile, os.O_RDWR|os.O_CREATE, 0644)
-	if err != nil {
-		return nil, fmt.Errorf("opening %s: %w", taskFile, err)
-	}
-	defer func() { _ = f.Close() }()
-
-	if err := syscall.Flock(int(f.Fd()), syscall.LOCK_EX); err != nil {
-		return nil, fmt.Errorf("locking %s: %w", taskFile, err)
-	}
-	defer func() { _ = syscall.Flock(int(f.Fd()), syscall.LOCK_UN) }()
-
-	data, err := io.ReadAll(f)
-	if err != nil {
-		return nil, fmt.Errorf("reading %s: %w", taskFile, err)
-	}
-
-	var tasks []Task
-	if len(data) > 0 {
-		if err := json.Unmarshal(data, &tasks); err != nil {
-			return nil, fmt.Errorf("%s is corrupted", taskFile)
+	var result []Task
+	err := withLockedFile(os.O_RDWR|os.O_CREATE, func(f *os.File) error {
+		tasks, err := readTasksFromFile(f)
+		if err != nil {
+			return err
 		}
-	}
 
-	result, err := fn(tasks)
+		result, err = fn(tasks)
+		if err != nil {
+			return err
+		}
+
+		out, err := json.MarshalIndent(result, "", "  ")
+		if err != nil {
+			return fmt.Errorf("marshaling tasks: %w", err)
+		}
+
+		if err := f.Truncate(0); err != nil {
+			return fmt.Errorf("truncating %s: %w", taskFile, err)
+		}
+		if _, err := f.Seek(0, 0); err != nil {
+			return fmt.Errorf("seeking %s: %w", taskFile, err)
+		}
+		if _, err := f.Write(out); err != nil {
+			return fmt.Errorf("writing %s: %w", taskFile, err)
+		}
+		return nil
+	})
 	if err != nil {
 		return nil, err
-	}
-
-	out, err := json.MarshalIndent(result, "", "  ")
-	if err != nil {
-		return nil, fmt.Errorf("marshaling tasks: %w", err)
-	}
-
-	if err := f.Truncate(0); err != nil {
-		return nil, fmt.Errorf("truncating %s: %w", taskFile, err)
-	}
-	if _, err := f.Seek(0, 0); err != nil {
-		return nil, fmt.Errorf("seeking %s: %w", taskFile, err)
-	}
-	if _, err := f.Write(out); err != nil {
-		return nil, fmt.Errorf("writing %s: %w", taskFile, err)
 	}
 	return result, nil
 }
