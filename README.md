@@ -68,12 +68,6 @@ Each task has the following properties:
 
 Tasks are stored in `tasks.json` in the current directory. The file is created automatically when you add your first task.
 
-To use a custom file path, set the `TASK_FILE` environment variable:
-
-```bash
-TASK_FILE=/path/to/tasks.json task-cli add "My task"
-```
-
 ## Development
 
 ```bash
