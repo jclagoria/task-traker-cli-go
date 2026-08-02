@@ -156,8 +156,10 @@ func AddTask(description string) (Task, error) {
 
 	result, err := rwTasks(func(tasks []Task) ([]Task, error) {
 		id := 1
-		if len(tasks) > 0 {
-			id = tasks[len(tasks)-1].ID + 1
+		for _, t := range tasks {
+			if t.ID >= id {
+				id = t.ID + 1
+			}
 		}
 		added = Task{
 			ID:          id,

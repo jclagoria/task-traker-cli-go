@@ -119,6 +119,21 @@ func TestAddTaskIncrementID(t *testing.T) {
 	}
 }
 
+func TestAddTaskAfterDelete(t *testing.T) {
+	useTempFile(t)
+	_, _ = AddTask("First")
+	_, _ = AddTask("Second")
+	_ = DeleteTask(1)
+
+	task3, err := AddTask("Third")
+	if err != nil {
+		t.Fatalf("AddTask: %v", err)
+	}
+	if task3.ID != 3 {
+		t.Errorf("ID = %d, want 3 (max existing was 2)", task3.ID)
+	}
+}
+
 func TestAddTaskPersistsToFile(t *testing.T) {
 	useTempFile(t)
 	_, _ = AddTask("Persist me")
