@@ -1,3 +1,4 @@
+// Package main implements a CLI task tracker with JSON file storage.
 package main
 
 import (
@@ -22,18 +23,23 @@ func getFileLock(path string) *sync.Mutex {
 	return fileLocks[path]
 }
 
+// Status represents the state of a task.
 type Status string
 
 const (
-	StatusTodo       Status = "todo"
+	// StatusTodo is the initial state of a newly created task.
+	StatusTodo Status = "todo"
+	// StatusInProgress indicates a task is being worked on.
 	StatusInProgress Status = "in-progress"
-	StatusDone       Status = "done"
+	// StatusDone indicates a completed task.
+	StatusDone Status = "done"
 )
 
 func validStatus(s Status) bool {
 	return s == StatusTodo || s == StatusInProgress || s == StatusDone
 }
 
+// Task represents a single task with metadata.
 type Task struct {
 	ID          int    `json:"id"`
 	Description string `json:"description"`
@@ -42,6 +48,7 @@ type Task struct {
 	UpdatedAt   string `json:"updatedAt"`
 }
 
+// TaskFilePath returns the path to the JSON task file, defaulting to tasks.json.
 func TaskFilePath() string {
 	if v := os.Getenv("TASK_FILE"); v != "" {
 		return v
@@ -49,6 +56,7 @@ func TaskFilePath() string {
 	return "tasks.json"
 }
 
+// LoadTasks reads and unmarshals tasks from the JSON file.
 func LoadTasks(filePath string) ([]Task, error) {
 	f, err := os.Open(filePath)
 	if err != nil {
@@ -80,6 +88,7 @@ func LoadTasks(filePath string) ([]Task, error) {
 	return tasks, nil
 }
 
+// SaveTasks marshals and writes tasks to the JSON file.
 func SaveTasks(filePath string, tasks []Task) error {
 	data, err := json.MarshalIndent(tasks, "", "  ")
 	if err != nil {
@@ -110,6 +119,7 @@ func SaveTasks(filePath string, tasks []Task) error {
 	return nil
 }
 
+// AddTask creates a new task with auto-incremented ID and status todo.
 func AddTask(filePath, description string) (Task, error) {
 	getFileLock(filePath).Lock()
 	defer getFileLock(filePath).Unlock()
@@ -140,6 +150,7 @@ func AddTask(filePath, description string) (Task, error) {
 	return task, nil
 }
 
+// ListTasks returns all tasks, optionally filtered by status.
 func ListTasks(filePath string, status Status) ([]Task, error) {
 	tasks, err := LoadTasks(filePath)
 	if err != nil {
@@ -159,6 +170,7 @@ func ListTasks(filePath string, status Status) ([]Task, error) {
 	return filtered, nil
 }
 
+// UpdateTask updates the description of an existing task by ID.
 func UpdateTask(filePath string, id int, description string) (Task, error) {
 	getFileLock(filePath).Lock()
 	defer getFileLock(filePath).Unlock()
@@ -181,6 +193,7 @@ func UpdateTask(filePath string, id int, description string) (Task, error) {
 	return Task{}, fmt.Errorf("task with ID %d not found", id)
 }
 
+// DeleteTask removes a task by ID.
 func DeleteTask(filePath string, id int) error {
 	getFileLock(filePath).Lock()
 	defer getFileLock(filePath).Unlock()
@@ -199,6 +212,7 @@ func DeleteTask(filePath string, id int) error {
 	return fmt.Errorf("task with ID %d not found", id)
 }
 
+// MarkTask updates the status of an existing task by ID.
 func MarkTask(filePath string, id int, status Status) (Task, error) {
 	if !validStatus(status) {
 		return Task{}, fmt.Errorf("invalid status %q, must be one of: todo, in-progress, done", status)
