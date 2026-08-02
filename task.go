@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"sync"
 	"syscall"
@@ -51,7 +52,7 @@ func LoadTasks(filePath string) ([]Task, error) {
 	}
 	defer func() { _ = syscall.Flock(int(f.Fd()), syscall.LOCK_UN) }()
 
-	data, err := os.ReadFile(filePath)
+	data, err := io.ReadAll(f)
 	if err != nil {
 		return nil, fmt.Errorf("reading %s: %w", filePath, err)
 	}
@@ -73,7 +74,7 @@ func SaveTasks(filePath string, tasks []Task) error {
 		return fmt.Errorf("marshaling tasks: %w", err)
 	}
 
-	f, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+	f, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE, 0644)
 	if err != nil {
 		return fmt.Errorf("opening %s: %w", filePath, err)
 	}
@@ -83,6 +84,13 @@ func SaveTasks(filePath string, tasks []Task) error {
 		return fmt.Errorf("locking %s: %w", filePath, err)
 	}
 	defer func() { _ = syscall.Flock(int(f.Fd()), syscall.LOCK_UN) }()
+
+	if err := f.Truncate(0); err != nil {
+		return fmt.Errorf("truncating %s: %w", filePath, err)
+	}
+	if _, err := f.Seek(0, 0); err != nil {
+		return fmt.Errorf("seeking %s: %w", filePath, err)
+	}
 
 	if _, err := f.Write(data); err != nil {
 		return fmt.Errorf("writing %s: %w", filePath, err)
