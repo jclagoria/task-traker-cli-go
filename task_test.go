@@ -20,8 +20,8 @@ func TestSaveAndLoadRoundTrip(t *testing.T) {
 		{ID: 2, Description: "Walk dog", Status: StatusDone, CreatedAt: "2026-01-02T00:00:00Z", UpdatedAt: "2026-01-02T00:00:00Z"},
 	}
 
-	if err := SaveTasks(tasks); err != nil {
-		t.Fatalf("SaveTasks: %v", err)
+	if err := saveTasks(tasks); err != nil {
+		t.Fatalf("saveTasks: %v", err)
 	}
 
 	loaded, err := LoadTasks()
@@ -137,7 +137,7 @@ func TestAddTaskPersistsToFile(t *testing.T) {
 
 func TestListAllTasks(t *testing.T) {
 	useTempFile(t)
-	_ = SaveTasks([]Task{
+	_ = saveTasks([]Task{
 		{ID: 1, Description: "A", Status: StatusTodo},
 		{ID: 2, Description: "B", Status: StatusDone},
 	})
@@ -153,7 +153,7 @@ func TestListAllTasks(t *testing.T) {
 
 func TestListFilterByStatus(t *testing.T) {
 	useTempFile(t)
-	_ = SaveTasks([]Task{
+	_ = saveTasks([]Task{
 		{ID: 1, Description: "A", Status: StatusTodo},
 		{ID: 2, Description: "B", Status: StatusDone},
 		{ID: 3, Description: "C", Status: StatusTodo},
@@ -181,7 +181,7 @@ func TestListEmptyFile(t *testing.T) {
 
 func TestListNoMatch(t *testing.T) {
 	useTempFile(t)
-	_ = SaveTasks([]Task{
+	_ = saveTasks([]Task{
 		{ID: 1, Description: "A", Status: StatusTodo},
 	})
 
@@ -193,7 +193,7 @@ func TestListNoMatch(t *testing.T) {
 
 func TestListInvalidStatusFilter(t *testing.T) {
 	useTempFile(t)
-	_ = SaveTasks([]Task{
+	_ = saveTasks([]Task{
 		{ID: 1, Description: "A", Status: StatusTodo},
 	})
 
@@ -205,7 +205,7 @@ func TestListInvalidStatusFilter(t *testing.T) {
 
 func TestUpdateTaskDescription(t *testing.T) {
 	useTempFile(t)
-	_ = SaveTasks([]Task{
+	_ = saveTasks([]Task{
 		{ID: 1, Description: "Old", Status: StatusTodo, CreatedAt: "2026-01-01T00:00:00Z", UpdatedAt: "2026-01-01T00:00:00Z"},
 	})
 
@@ -220,7 +220,7 @@ func TestUpdateTaskDescription(t *testing.T) {
 
 func TestUpdateTaskPreservesCreatedAt(t *testing.T) {
 	useTempFile(t)
-	_ = SaveTasks([]Task{
+	_ = saveTasks([]Task{
 		{ID: 1, Description: "Old", Status: StatusTodo, CreatedAt: "2026-01-01T00:00:00Z", UpdatedAt: "2026-01-01T00:00:00Z"},
 	})
 
@@ -232,7 +232,7 @@ func TestUpdateTaskPreservesCreatedAt(t *testing.T) {
 
 func TestUpdateTaskSetsUpdatedAt(t *testing.T) {
 	useTempFile(t)
-	_ = SaveTasks([]Task{
+	_ = saveTasks([]Task{
 		{ID: 1, Description: "Old", Status: StatusTodo, CreatedAt: "2026-01-01T00:00:00Z", UpdatedAt: "2026-01-01T00:00:00Z"},
 	})
 
@@ -244,7 +244,7 @@ func TestUpdateTaskSetsUpdatedAt(t *testing.T) {
 
 func TestUpdateTaskNotFound(t *testing.T) {
 	useTempFile(t)
-	_ = SaveTasks([]Task{
+	_ = saveTasks([]Task{
 		{ID: 1, Description: "A", Status: StatusTodo},
 	})
 
@@ -256,7 +256,7 @@ func TestUpdateTaskNotFound(t *testing.T) {
 
 func TestDeleteTask(t *testing.T) {
 	useTempFile(t)
-	_ = SaveTasks([]Task{
+	_ = saveTasks([]Task{
 		{ID: 1, Description: "A", Status: StatusTodo},
 		{ID: 2, Description: "B", Status: StatusDone},
 	})
@@ -276,7 +276,7 @@ func TestDeleteTask(t *testing.T) {
 
 func TestDeleteTaskNotFound(t *testing.T) {
 	useTempFile(t)
-	_ = SaveTasks([]Task{
+	_ = saveTasks([]Task{
 		{ID: 1, Description: "A", Status: StatusTodo},
 	})
 
@@ -288,7 +288,7 @@ func TestDeleteTaskNotFound(t *testing.T) {
 
 func TestDeletePreservesOtherIDs(t *testing.T) {
 	useTempFile(t)
-	_ = SaveTasks([]Task{
+	_ = saveTasks([]Task{
 		{ID: 1, Description: "A", Status: StatusTodo},
 		{ID: 2, Description: "B", Status: StatusTodo},
 		{ID: 3, Description: "C", Status: StatusTodo},
@@ -307,7 +307,7 @@ func TestDeletePreservesOtherIDs(t *testing.T) {
 
 func TestMarkTaskFromTodo(t *testing.T) {
 	useTempFile(t)
-	_ = SaveTasks([]Task{
+	_ = saveTasks([]Task{
 		{ID: 1, Description: "A", Status: StatusTodo, CreatedAt: "2026-01-01T00:00:00Z", UpdatedAt: "2026-01-01T00:00:00Z"},
 	})
 
@@ -325,7 +325,7 @@ func TestMarkTaskFromTodo(t *testing.T) {
 
 func TestMarkTaskFromDone(t *testing.T) {
 	useTempFile(t)
-	_ = SaveTasks([]Task{
+	_ = saveTasks([]Task{
 		{ID: 1, Description: "A", Status: StatusDone},
 	})
 
@@ -337,7 +337,7 @@ func TestMarkTaskFromDone(t *testing.T) {
 
 func TestMarkTaskNotFound(t *testing.T) {
 	useTempFile(t)
-	_ = SaveTasks([]Task{
+	_ = saveTasks([]Task{
 		{ID: 1, Description: "A", Status: StatusTodo},
 	})
 
@@ -349,7 +349,7 @@ func TestMarkTaskNotFound(t *testing.T) {
 
 func TestMarkTaskInvalidStatus(t *testing.T) {
 	useTempFile(t)
-	_ = SaveTasks([]Task{
+	_ = saveTasks([]Task{
 		{ID: 1, Description: "A", Status: StatusTodo},
 	})
 
@@ -361,7 +361,7 @@ func TestMarkTaskInvalidStatus(t *testing.T) {
 
 func TestConcurrentWrites(t *testing.T) {
 	useTempFile(t)
-	_ = SaveTasks([]Task{})
+	_ = saveTasks([]Task{})
 
 	var wg sync.WaitGroup
 	for i := 0; i < 10; i++ {

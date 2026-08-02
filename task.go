@@ -70,8 +70,8 @@ func LoadTasks() ([]Task, error) {
 	return tasks, nil
 }
 
-// SaveTasks marshals and writes tasks to the JSON file.
-func SaveTasks(tasks []Task) error {
+// saveTasks marshals and writes tasks to the JSON file (test-only).
+func saveTasks(tasks []Task) error {
 	data, err := json.MarshalIndent(tasks, "", "  ")
 	if err != nil {
 		return fmt.Errorf("marshaling tasks: %w", err)
