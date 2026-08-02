@@ -170,8 +170,8 @@ func ListTasks(filePath string, status Status) ([]Task, error) {
 	return filtered, nil
 }
 
-// UpdateTask updates the description of an existing task by ID.
-func UpdateTask(filePath string, id int, description string) (Task, error) {
+// modifyTask locks, loads, mutates a task by ID, and saves.
+func modifyTask(filePath string, id int, mutate func(*Task)) (Task, error) {
 	getFileLock(filePath).Lock()
 	defer getFileLock(filePath).Unlock()
 
@@ -182,7 +182,7 @@ func UpdateTask(filePath string, id int, description string) (Task, error) {
 
 	for i, t := range tasks {
 		if t.ID == id {
-			tasks[i].Description = description
+			mutate(&tasks[i])
 			tasks[i].UpdatedAt = time.Now().UTC().Format(time.RFC3339)
 			if err := SaveTasks(filePath, tasks); err != nil {
 				return Task{}, err
@@ -191,6 +191,11 @@ func UpdateTask(filePath string, id int, description string) (Task, error) {
 		}
 	}
 	return Task{}, fmt.Errorf("task with ID %d not found", id)
+}
+
+// UpdateTask updates the description of an existing task by ID.
+func UpdateTask(filePath string, id int, description string) (Task, error) {
+	return modifyTask(filePath, id, func(t *Task) { t.Description = description })
 }
 
 // DeleteTask removes a task by ID.
@@ -217,24 +222,5 @@ func MarkTask(filePath string, id int, status Status) (Task, error) {
 	if !validStatus(status) {
 		return Task{}, fmt.Errorf("invalid status %q, must be one of: todo, in-progress, done", status)
 	}
-
-	getFileLock(filePath).Lock()
-	defer getFileLock(filePath).Unlock()
-
-	tasks, err := LoadTasks(filePath)
-	if err != nil {
-		return Task{}, err
-	}
-
-	for i, t := range tasks {
-		if t.ID == id {
-			tasks[i].Status = status
-			tasks[i].UpdatedAt = time.Now().UTC().Format(time.RFC3339)
-			if err := SaveTasks(filePath, tasks); err != nil {
-				return Task{}, err
-			}
-			return tasks[i], nil
-		}
-	}
-	return Task{}, fmt.Errorf("task with ID %d not found", id)
+	return modifyTask(filePath, id, func(t *Task) { t.Status = status })
 }
