@@ -64,13 +64,24 @@ func cmdList() error {
 	return nil
 }
 
+func parseID(minArgs int) (int, error) {
+	if len(os.Args) < minArgs {
+		return 0, fmt.Errorf("id required")
+	}
+	id, err := strconv.Atoi(os.Args[2])
+	if err != nil {
+		return 0, fmt.Errorf("invalid ID %q", os.Args[2])
+	}
+	return id, nil
+}
+
 func cmdUpdate() error {
 	if len(os.Args) < 4 {
 		return fmt.Errorf("id and description required")
 	}
-	id, err := strconv.Atoi(os.Args[2])
+	id, err := parseID(4)
 	if err != nil {
-		return fmt.Errorf("invalid ID %q", os.Args[2])
+		return err
 	}
 	_, err = UpdateTask(TaskFilePath(), id, os.Args[3])
 	if err != nil {
@@ -81,12 +92,9 @@ func cmdUpdate() error {
 }
 
 func cmdDelete() error {
-	if len(os.Args) < 3 {
-		return fmt.Errorf("id required")
-	}
-	id, err := strconv.Atoi(os.Args[2])
+	id, err := parseID(3)
 	if err != nil {
-		return fmt.Errorf("invalid ID %q", os.Args[2])
+		return err
 	}
 	if err := DeleteTask(TaskFilePath(), id); err != nil {
 		return err
@@ -96,12 +104,9 @@ func cmdDelete() error {
 }
 
 func cmdMark(status Status) error {
-	if len(os.Args) < 3 {
-		return fmt.Errorf("id required")
-	}
-	id, err := strconv.Atoi(os.Args[2])
+	id, err := parseID(3)
 	if err != nil {
-		return fmt.Errorf("invalid ID %q", os.Args[2])
+		return err
 	}
 	_, err = MarkTask(TaskFilePath(), id, status)
 	if err != nil {
