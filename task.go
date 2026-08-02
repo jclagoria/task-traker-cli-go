@@ -10,6 +10,9 @@ import (
 	"time"
 )
 
+// taskFile is the path to the JSON task file.
+var taskFile = "tasks.json"
+
 // Status represents the state of a task.
 type Status string
 
@@ -36,24 +39,24 @@ type Task struct {
 }
 
 // LoadTasks reads and unmarshals tasks from the JSON file.
-func LoadTasks(filePath string) ([]Task, error) {
-	f, err := os.Open(filePath)
+func LoadTasks() ([]Task, error) {
+	f, err := os.Open(taskFile)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return []Task{}, nil
 		}
-		return nil, fmt.Errorf("reading %s: %w", filePath, err)
+		return nil, fmt.Errorf("reading %s: %w", taskFile, err)
 	}
 	defer func() { _ = f.Close() }()
 
 	if err := syscall.Flock(int(f.Fd()), syscall.LOCK_EX); err != nil {
-		return nil, fmt.Errorf("locking %s: %w", filePath, err)
+		return nil, fmt.Errorf("locking %s: %w", taskFile, err)
 	}
 	defer func() { _ = syscall.Flock(int(f.Fd()), syscall.LOCK_UN) }()
 
 	data, err := io.ReadAll(f)
 	if err != nil {
-		return nil, fmt.Errorf("reading %s: %w", filePath, err)
+		return nil, fmt.Errorf("reading %s: %w", taskFile, err)
 	}
 
 	if len(data) == 0 {
@@ -62,65 +65,65 @@ func LoadTasks(filePath string) ([]Task, error) {
 
 	var tasks []Task
 	if err := json.Unmarshal(data, &tasks); err != nil {
-		return nil, fmt.Errorf("%s is corrupted", filePath)
+		return nil, fmt.Errorf("%s is corrupted", taskFile)
 	}
 	return tasks, nil
 }
 
 // SaveTasks marshals and writes tasks to the JSON file.
-func SaveTasks(filePath string, tasks []Task) error {
+func SaveTasks(tasks []Task) error {
 	data, err := json.MarshalIndent(tasks, "", "  ")
 	if err != nil {
 		return fmt.Errorf("marshaling tasks: %w", err)
 	}
 
-	f, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE, 0644)
+	f, err := os.OpenFile(taskFile, os.O_WRONLY|os.O_CREATE, 0644)
 	if err != nil {
-		return fmt.Errorf("opening %s: %w", filePath, err)
+		return fmt.Errorf("opening %s: %w", taskFile, err)
 	}
 	defer func() { _ = f.Close() }()
 
 	if err := syscall.Flock(int(f.Fd()), syscall.LOCK_EX); err != nil {
-		return fmt.Errorf("locking %s: %w", filePath, err)
+		return fmt.Errorf("locking %s: %w", taskFile, err)
 	}
 	defer func() { _ = syscall.Flock(int(f.Fd()), syscall.LOCK_UN) }()
 
 	if err := f.Truncate(0); err != nil {
-		return fmt.Errorf("truncating %s: %w", filePath, err)
+		return fmt.Errorf("truncating %s: %w", taskFile, err)
 	}
 	if _, err := f.Seek(0, 0); err != nil {
-		return fmt.Errorf("seeking %s: %w", filePath, err)
+		return fmt.Errorf("seeking %s: %w", taskFile, err)
 	}
 
 	if _, err := f.Write(data); err != nil {
-		return fmt.Errorf("writing %s: %w", filePath, err)
+		return fmt.Errorf("writing %s: %w", taskFile, err)
 	}
 	return nil
 }
 
 // rwTasks opens the file, acquires an exclusive flock, reads tasks, calls fn,
 // and writes the result back — all under a single lock.
-func rwTasks(filePath string, fn func([]Task) ([]Task, error)) ([]Task, error) {
-	f, err := os.OpenFile(filePath, os.O_RDWR|os.O_CREATE, 0644)
+func rwTasks(fn func([]Task) ([]Task, error)) ([]Task, error) {
+	f, err := os.OpenFile(taskFile, os.O_RDWR|os.O_CREATE, 0644)
 	if err != nil {
-		return nil, fmt.Errorf("opening %s: %w", filePath, err)
+		return nil, fmt.Errorf("opening %s: %w", taskFile, err)
 	}
 	defer func() { _ = f.Close() }()
 
 	if err := syscall.Flock(int(f.Fd()), syscall.LOCK_EX); err != nil {
-		return nil, fmt.Errorf("locking %s: %w", filePath, err)
+		return nil, fmt.Errorf("locking %s: %w", taskFile, err)
 	}
 	defer func() { _ = syscall.Flock(int(f.Fd()), syscall.LOCK_UN) }()
 
 	data, err := io.ReadAll(f)
 	if err != nil {
-		return nil, fmt.Errorf("reading %s: %w", filePath, err)
+		return nil, fmt.Errorf("reading %s: %w", taskFile, err)
 	}
 
 	var tasks []Task
 	if len(data) > 0 {
 		if err := json.Unmarshal(data, &tasks); err != nil {
-			return nil, fmt.Errorf("%s is corrupted", filePath)
+			return nil, fmt.Errorf("%s is corrupted", taskFile)
 		}
 	}
 
@@ -135,23 +138,23 @@ func rwTasks(filePath string, fn func([]Task) ([]Task, error)) ([]Task, error) {
 	}
 
 	if err := f.Truncate(0); err != nil {
-		return nil, fmt.Errorf("truncating %s: %w", filePath, err)
+		return nil, fmt.Errorf("truncating %s: %w", taskFile, err)
 	}
 	if _, err := f.Seek(0, 0); err != nil {
-		return nil, fmt.Errorf("seeking %s: %w", filePath, err)
+		return nil, fmt.Errorf("seeking %s: %w", taskFile, err)
 	}
 	if _, err := f.Write(out); err != nil {
-		return nil, fmt.Errorf("writing %s: %w", filePath, err)
+		return nil, fmt.Errorf("writing %s: %w", taskFile, err)
 	}
 	return result, nil
 }
 
 // AddTask creates a new task with auto-incremented ID and status todo.
-func AddTask(filePath, description string) (Task, error) {
+func AddTask(description string) (Task, error) {
 	now := time.Now().UTC().Format(time.RFC3339)
 	var added Task
 
-	result, err := rwTasks(filePath, func(tasks []Task) ([]Task, error) {
+	result, err := rwTasks(func(tasks []Task) ([]Task, error) {
 		id := 1
 		if len(tasks) > 0 {
 			id = tasks[len(tasks)-1].ID + 1
@@ -173,8 +176,8 @@ func AddTask(filePath, description string) (Task, error) {
 }
 
 // ListTasks returns all tasks, optionally filtered by status.
-func ListTasks(filePath string, status Status) ([]Task, error) {
-	tasks, err := LoadTasks(filePath)
+func ListTasks(status Status) ([]Task, error) {
+	tasks, err := LoadTasks()
 	if err != nil {
 		return nil, err
 	}
@@ -193,10 +196,10 @@ func ListTasks(filePath string, status Status) ([]Task, error) {
 }
 
 // modifyTask locks, loads, mutates a task by ID, and saves.
-func modifyTask(filePath string, id int, mutate func(*Task)) (Task, error) {
+func modifyTask(id int, mutate func(*Task)) (Task, error) {
 	var modified Task
 
-	_, err := rwTasks(filePath, func(tasks []Task) ([]Task, error) {
+	_, err := rwTasks(func(tasks []Task) ([]Task, error) {
 		for i, t := range tasks {
 			if t.ID == id {
 				mutate(&tasks[i])
@@ -214,13 +217,13 @@ func modifyTask(filePath string, id int, mutate func(*Task)) (Task, error) {
 }
 
 // UpdateTask updates the description of an existing task by ID.
-func UpdateTask(filePath string, id int, description string) (Task, error) {
-	return modifyTask(filePath, id, func(t *Task) { t.Description = description })
+func UpdateTask(id int, description string) (Task, error) {
+	return modifyTask(id, func(t *Task) { t.Description = description })
 }
 
 // DeleteTask removes a task by ID.
-func DeleteTask(filePath string, id int) error {
-	_, err := rwTasks(filePath, func(tasks []Task) ([]Task, error) {
+func DeleteTask(id int) error {
+	_, err := rwTasks(func(tasks []Task) ([]Task, error) {
 		for i, t := range tasks {
 			if t.ID == id {
 				return append(tasks[:i], tasks[i+1:]...), nil
@@ -232,9 +235,9 @@ func DeleteTask(filePath string, id int) error {
 }
 
 // MarkTask updates the status of an existing task by ID.
-func MarkTask(filePath string, id int, status Status) (Task, error) {
+func MarkTask(id int, status Status) (Task, error) {
 	if !validStatus(status) {
 		return Task{}, fmt.Errorf("invalid status %q, must be one of: todo, in-progress, done", status)
 	}
-	return modifyTask(filePath, id, func(t *Task) { t.Status = status })
+	return modifyTask(id, func(t *Task) { t.Status = status })
 }

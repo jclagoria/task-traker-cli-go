@@ -6,11 +6,9 @@ import (
 	"strconv"
 )
 
-const taskFile = "tasks.json"
-
 func main() {
 	if len(os.Args) < 2 {
-		fmt.Println("Usage: task-traker-cli <command> [arguments]")
+		fmt.Println("Usage: task-cli <command> [arguments]")
 		return
 	}
 
@@ -29,7 +27,7 @@ func main() {
 	case "mark-done":
 		err = cmdMark(StatusDone)
 	default:
-		fmt.Fprintf(os.Stderr, "Error: unknown command %q\n\nUsage: task-traker-cli <command> [arguments]\nCommands: add, list, update, delete, mark-in-progress, mark-done\n", os.Args[1])
+		fmt.Fprintf(os.Stderr, "Error: unknown command %q\n\nUsage: task-cli <command> [arguments]\nCommands: add, list, update, delete, mark-in-progress, mark-done\n", os.Args[1])
 		os.Exit(1)
 	}
 
@@ -43,7 +41,7 @@ func cmdAdd() error {
 	if len(os.Args) < 3 {
 		return fmt.Errorf("description required")
 	}
-	task, err := AddTask(taskFile, os.Args[2])
+	task, err := AddTask(os.Args[2])
 	if err != nil {
 		return err
 	}
@@ -56,7 +54,7 @@ func cmdList() error {
 	if len(os.Args) >= 3 {
 		status = Status(os.Args[2])
 	}
-	tasks, err := ListTasks(taskFile, status)
+	tasks, err := ListTasks(status)
 	if err != nil {
 		return err
 	}
@@ -85,7 +83,7 @@ func cmdUpdate() error {
 	if err != nil {
 		return err
 	}
-	_, err = UpdateTask(taskFile, id, os.Args[3])
+	_, err = UpdateTask(id, os.Args[3])
 	if err != nil {
 		return err
 	}
@@ -98,7 +96,7 @@ func cmdDelete() error {
 	if err != nil {
 		return err
 	}
-	if err := DeleteTask(taskFile, id); err != nil {
+	if err := DeleteTask(id); err != nil {
 		return err
 	}
 	fmt.Printf("Task %d deleted successfully\n", id)
@@ -110,7 +108,7 @@ func cmdMark(status Status) error {
 	if err != nil {
 		return err
 	}
-	_, err = MarkTask(taskFile, id, status)
+	_, err = MarkTask(id, status)
 	if err != nil {
 		return err
 	}
