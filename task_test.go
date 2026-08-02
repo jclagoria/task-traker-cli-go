@@ -191,6 +191,18 @@ func TestListNoMatch(t *testing.T) {
 	}
 }
 
+func TestListInvalidStatusFilter(t *testing.T) {
+	useTempFile(t)
+	_ = SaveTasks([]Task{
+		{ID: 1, Description: "A", Status: StatusTodo},
+	})
+
+	_, err := ListTasks("banana")
+	if err == nil {
+		t.Fatal("expected error for invalid status filter, got nil")
+	}
+}
+
 func TestUpdateTaskDescription(t *testing.T) {
 	useTempFile(t)
 	_ = SaveTasks([]Task{

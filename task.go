@@ -177,6 +177,10 @@ func AddTask(description string) (Task, error) {
 
 // ListTasks returns all tasks, optionally filtered by status.
 func ListTasks(status Status) ([]Task, error) {
+	if status != "" && !validStatus(status) {
+		return nil, fmt.Errorf("invalid status %q, must be one of: todo, in-progress, done", status)
+	}
+
 	tasks, err := LoadTasks()
 	if err != nil {
 		return nil, err
