@@ -22,10 +22,22 @@ func getFileLock(path string) *sync.Mutex {
 	return fileLocks[path]
 }
 
+type Status string
+
+const (
+	StatusTodo       Status = "todo"
+	StatusInProgress Status = "in-progress"
+	StatusDone       Status = "done"
+)
+
+func validStatus(s Status) bool {
+	return s == StatusTodo || s == StatusInProgress || s == StatusDone
+}
+
 type Task struct {
 	ID          int    `json:"id"`
 	Description string `json:"description"`
-	Status      string `json:"status"`
+	Status      Status `json:"status"`
 	CreatedAt   string `json:"createdAt"`
 	UpdatedAt   string `json:"updatedAt"`
 }
@@ -116,7 +128,7 @@ func AddTask(filePath, description string) (Task, error) {
 	task := Task{
 		ID:          id,
 		Description: description,
-		Status:      "todo",
+		Status:      StatusTodo,
 		CreatedAt:   now,
 		UpdatedAt:   now,
 	}
@@ -128,7 +140,7 @@ func AddTask(filePath, description string) (Task, error) {
 	return task, nil
 }
 
-func ListTasks(filePath, status string) ([]Task, error) {
+func ListTasks(filePath string, status Status) ([]Task, error) {
 	tasks, err := LoadTasks(filePath)
 	if err != nil {
 		return nil, err
@@ -187,7 +199,11 @@ func DeleteTask(filePath string, id int) error {
 	return fmt.Errorf("task with ID %d not found", id)
 }
 
-func MarkTask(filePath string, id int, status string) (Task, error) {
+func MarkTask(filePath string, id int, status Status) (Task, error) {
+	if !validStatus(status) {
+		return Task{}, fmt.Errorf("invalid status %q, must be one of: todo, in-progress, done", status)
+	}
+
 	getFileLock(filePath).Lock()
 	defer getFileLock(filePath).Unlock()
 

@@ -11,8 +11,8 @@ import (
 func TestSaveAndLoadRoundTrip(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "tasks.json")
 	tasks := []Task{
-		{ID: 1, Description: "Buy milk", Status: "todo", CreatedAt: "2026-01-01T00:00:00Z", UpdatedAt: "2026-01-01T00:00:00Z"},
-		{ID: 2, Description: "Walk dog", Status: "done", CreatedAt: "2026-01-02T00:00:00Z", UpdatedAt: "2026-01-02T00:00:00Z"},
+		{ID: 1, Description: "Buy milk", Status: StatusTodo, CreatedAt: "2026-01-01T00:00:00Z", UpdatedAt: "2026-01-01T00:00:00Z"},
+		{ID: 2, Description: "Walk dog", Status: StatusDone, CreatedAt: "2026-01-02T00:00:00Z", UpdatedAt: "2026-01-02T00:00:00Z"},
 	}
 
 	if err := SaveTasks(path, tasks); err != nil {
@@ -30,8 +30,8 @@ func TestSaveAndLoadRoundTrip(t *testing.T) {
 	if loaded[0].Description != "Buy milk" {
 		t.Errorf("task 1 description = %q, want %q", loaded[0].Description, "Buy milk")
 	}
-	if loaded[1].Status != "done" {
-		t.Errorf("task 2 status = %q, want %q", loaded[1].Status, "done")
+	if loaded[1].Status != StatusDone {
+		t.Errorf("task 2 status = %q, want %q", loaded[1].Status, StatusDone)
 	}
 }
 
@@ -95,7 +95,7 @@ func TestTaskFilePathEnv(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "env.json")
 	t.Setenv("TASK_FILE", path)
 
-	tasks := []Task{{ID: 1, Description: "Env task", Status: "todo", CreatedAt: "2026-01-01T00:00:00Z", UpdatedAt: "2026-01-01T00:00:00Z"}}
+	tasks := []Task{{ID: 1, Description: "Env task", Status: StatusTodo, CreatedAt: "2026-01-01T00:00:00Z", UpdatedAt: "2026-01-01T00:00:00Z"}}
 	if err := SaveTasks(path, tasks); err != nil {
 		t.Fatalf("SaveTasks: %v", err)
 	}
@@ -121,8 +121,8 @@ func TestAddTaskToEmptyList(t *testing.T) {
 	if task.Description != "Buy groceries" {
 		t.Errorf("Description = %q, want %q", task.Description, "Buy groceries")
 	}
-	if task.Status != "todo" {
-		t.Errorf("Status = %q, want %q", task.Status, "todo")
+	if task.Status != StatusTodo {
+		t.Errorf("Status = %q, want %q", task.Status, StatusTodo)
 	}
 	if task.CreatedAt == "" {
 		t.Error("CreatedAt is empty")
@@ -166,11 +166,11 @@ func TestAddTaskPersistsToFile(t *testing.T) {
 func TestListAllTasks(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "tasks.json")
 	_ = SaveTasks(path, []Task{
-		{ID: 1, Description: "A", Status: "todo"},
-		{ID: 2, Description: "B", Status: "done"},
+		{ID: 1, Description: "A", Status: StatusTodo},
+		{ID: 2, Description: "B", Status: StatusDone},
 	})
 
-	tasks, err := ListTasks(path, "")
+	tasks, err := ListTasks(path, Status(""))
 	if err != nil {
 		t.Fatalf("ListTasks: %v", err)
 	}
@@ -182,12 +182,12 @@ func TestListAllTasks(t *testing.T) {
 func TestListFilterByStatus(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "tasks.json")
 	_ = SaveTasks(path, []Task{
-		{ID: 1, Description: "A", Status: "todo"},
-		{ID: 2, Description: "B", Status: "done"},
-		{ID: 3, Description: "C", Status: "todo"},
+		{ID: 1, Description: "A", Status: StatusTodo},
+		{ID: 2, Description: "B", Status: StatusDone},
+		{ID: 3, Description: "C", Status: StatusTodo},
 	})
 
-	tasks, _ := ListTasks(path, "todo")
+	tasks, _ := ListTasks(path, StatusTodo)
 	if len(tasks) != 2 {
 		t.Fatalf("got %d, want 2", len(tasks))
 	}
@@ -198,7 +198,7 @@ func TestListFilterByStatus(t *testing.T) {
 
 func TestListEmptyFile(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "tasks.json")
-	tasks, err := ListTasks(path, "")
+	tasks, err := ListTasks(path, Status(""))
 	if err != nil {
 		t.Fatalf("ListTasks: %v", err)
 	}
@@ -210,10 +210,10 @@ func TestListEmptyFile(t *testing.T) {
 func TestListNoMatch(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "tasks.json")
 	_ = SaveTasks(path, []Task{
-		{ID: 1, Description: "A", Status: "todo"},
+		{ID: 1, Description: "A", Status: StatusTodo},
 	})
 
-	tasks, _ := ListTasks(path, "done")
+	tasks, _ := ListTasks(path, StatusDone)
 	if len(tasks) != 0 {
 		t.Fatalf("got %d, want 0", len(tasks))
 	}
@@ -222,7 +222,7 @@ func TestListNoMatch(t *testing.T) {
 func TestUpdateTaskDescription(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "tasks.json")
 	_ = SaveTasks(path, []Task{
-		{ID: 1, Description: "Old", Status: "todo", CreatedAt: "2026-01-01T00:00:00Z", UpdatedAt: "2026-01-01T00:00:00Z"},
+		{ID: 1, Description: "Old", Status: StatusTodo, CreatedAt: "2026-01-01T00:00:00Z", UpdatedAt: "2026-01-01T00:00:00Z"},
 	})
 
 	updated, err := UpdateTask(path, 1, "New")
@@ -237,7 +237,7 @@ func TestUpdateTaskDescription(t *testing.T) {
 func TestUpdateTaskPreservesCreatedAt(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "tasks.json")
 	_ = SaveTasks(path, []Task{
-		{ID: 1, Description: "Old", Status: "todo", CreatedAt: "2026-01-01T00:00:00Z", UpdatedAt: "2026-01-01T00:00:00Z"},
+		{ID: 1, Description: "Old", Status: StatusTodo, CreatedAt: "2026-01-01T00:00:00Z", UpdatedAt: "2026-01-01T00:00:00Z"},
 	})
 
 	updated, _ := UpdateTask(path, 1, "New")
@@ -249,7 +249,7 @@ func TestUpdateTaskPreservesCreatedAt(t *testing.T) {
 func TestUpdateTaskSetsUpdatedAt(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "tasks.json")
 	_ = SaveTasks(path, []Task{
-		{ID: 1, Description: "Old", Status: "todo", CreatedAt: "2026-01-01T00:00:00Z", UpdatedAt: "2026-01-01T00:00:00Z"},
+		{ID: 1, Description: "Old", Status: StatusTodo, CreatedAt: "2026-01-01T00:00:00Z", UpdatedAt: "2026-01-01T00:00:00Z"},
 	})
 
 	updated, _ := UpdateTask(path, 1, "New")
@@ -261,7 +261,7 @@ func TestUpdateTaskSetsUpdatedAt(t *testing.T) {
 func TestUpdateTaskNotFound(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "tasks.json")
 	_ = SaveTasks(path, []Task{
-		{ID: 1, Description: "A", Status: "todo"},
+		{ID: 1, Description: "A", Status: StatusTodo},
 	})
 
 	_, err := UpdateTask(path, 99, "New")
@@ -273,8 +273,8 @@ func TestUpdateTaskNotFound(t *testing.T) {
 func TestDeleteTask(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "tasks.json")
 	_ = SaveTasks(path, []Task{
-		{ID: 1, Description: "A", Status: "todo"},
-		{ID: 2, Description: "B", Status: "done"},
+		{ID: 1, Description: "A", Status: StatusTodo},
+		{ID: 2, Description: "B", Status: StatusDone},
 	})
 
 	if err := DeleteTask(path, 1); err != nil {
@@ -293,7 +293,7 @@ func TestDeleteTask(t *testing.T) {
 func TestDeleteTaskNotFound(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "tasks.json")
 	_ = SaveTasks(path, []Task{
-		{ID: 1, Description: "A", Status: "todo"},
+		{ID: 1, Description: "A", Status: StatusTodo},
 	})
 
 	err := DeleteTask(path, 99)
@@ -305,9 +305,9 @@ func TestDeleteTaskNotFound(t *testing.T) {
 func TestDeletePreservesOtherIDs(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "tasks.json")
 	_ = SaveTasks(path, []Task{
-		{ID: 1, Description: "A", Status: "todo"},
-		{ID: 2, Description: "B", Status: "todo"},
-		{ID: 3, Description: "C", Status: "todo"},
+		{ID: 1, Description: "A", Status: StatusTodo},
+		{ID: 2, Description: "B", Status: StatusTodo},
+		{ID: 3, Description: "C", Status: StatusTodo},
 	})
 
 	_ = DeleteTask(path, 2)
@@ -324,15 +324,15 @@ func TestDeletePreservesOtherIDs(t *testing.T) {
 func TestMarkTaskFromTodo(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "tasks.json")
 	_ = SaveTasks(path, []Task{
-		{ID: 1, Description: "A", Status: "todo", CreatedAt: "2026-01-01T00:00:00Z", UpdatedAt: "2026-01-01T00:00:00Z"},
+		{ID: 1, Description: "A", Status: StatusTodo, CreatedAt: "2026-01-01T00:00:00Z", UpdatedAt: "2026-01-01T00:00:00Z"},
 	})
 
-	marked, err := MarkTask(path, 1, "in-progress")
+	marked, err := MarkTask(path, 1, StatusInProgress)
 	if err != nil {
 		t.Fatalf("MarkTask: %v", err)
 	}
-	if marked.Status != "in-progress" {
-		t.Errorf("Status = %q, want %q", marked.Status, "in-progress")
+	if marked.Status != StatusInProgress {
+		t.Errorf("Status = %q, want %q", marked.Status, StatusInProgress)
 	}
 	if marked.CreatedAt != "2026-01-01T00:00:00Z" {
 		t.Errorf("CreatedAt changed to %q", marked.CreatedAt)
@@ -342,24 +342,36 @@ func TestMarkTaskFromTodo(t *testing.T) {
 func TestMarkTaskFromDone(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "tasks.json")
 	_ = SaveTasks(path, []Task{
-		{ID: 1, Description: "A", Status: "done"},
+		{ID: 1, Description: "A", Status: StatusDone},
 	})
 
-	marked, _ := MarkTask(path, 1, "in-progress")
-	if marked.Status != "in-progress" {
-		t.Errorf("Status = %q, want %q", marked.Status, "in-progress")
+	marked, _ := MarkTask(path, 1, StatusInProgress)
+	if marked.Status != StatusInProgress {
+		t.Errorf("Status = %q, want %q", marked.Status, StatusInProgress)
 	}
 }
 
 func TestMarkTaskNotFound(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "tasks.json")
 	_ = SaveTasks(path, []Task{
-		{ID: 1, Description: "A", Status: "todo"},
+		{ID: 1, Description: "A", Status: StatusTodo},
 	})
 
-	_, err := MarkTask(path, 99, "in-progress")
+	_, err := MarkTask(path, 99, StatusInProgress)
 	if err == nil {
 		t.Fatal("expected error, got nil")
+	}
+}
+
+func TestMarkTaskInvalidStatus(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "tasks.json")
+	_ = SaveTasks(path, []Task{
+		{ID: 1, Description: "A", Status: StatusTodo},
+	})
+
+	_, err := MarkTask(path, 1, "invalid")
+	if err == nil {
+		t.Fatal("expected error for invalid status, got nil")
 	}
 }
 

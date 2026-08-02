@@ -23,9 +23,9 @@ func main() {
 	case "delete":
 		err = cmdDelete()
 	case "mark-in-progress":
-		err = cmdMark("in-progress")
+		err = cmdMark(StatusInProgress)
 	case "mark-done":
-		err = cmdMark("done")
+		err = cmdMark(StatusDone)
 	default:
 		fmt.Fprintf(os.Stderr, "Error: unknown command %q\n\nUsage: task-traker-cli <command> [arguments]\nCommands: add, list, update, delete, mark-in-progress, mark-done\n", os.Args[1])
 		os.Exit(1)
@@ -50,9 +50,9 @@ func cmdAdd() error {
 }
 
 func cmdList() error {
-	status := ""
+	status := Status("")
 	if len(os.Args) >= 3 {
-		status = os.Args[2]
+		status = Status(os.Args[2])
 	}
 	tasks, err := ListTasks(TaskFilePath(), status)
 	if err != nil {
@@ -95,7 +95,7 @@ func cmdDelete() error {
 	return nil
 }
 
-func cmdMark(status string) error {
+func cmdMark(status Status) error {
 	if len(os.Args) < 3 {
 		return fmt.Errorf("id required")
 	}
