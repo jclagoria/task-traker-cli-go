@@ -2,6 +2,8 @@
 
 A simple command line interface (CLI) to track your tasks and manage your to-do list. Tasks are stored in a JSON file in the current directory.
 
+Project from [roadmap.sh](https://roadmap.sh/projects/task-tracker).
+
 ## Installation
 
 ```bash
